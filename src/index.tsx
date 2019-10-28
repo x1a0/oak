@@ -1,13 +1,12 @@
 import React from "react"
 import ReactDOM from "react-dom"
-import App from "./App"
+import { App } from "./App"
 import "./index.css"
-
-const MyComponent: React.FC = () => <div>Hello there</div>
+import { AppStateProvider } from "./app-state"
 
 ReactDOM.render(
-  <MyComponent>
+  <AppStateProvider>
     <App />
-  </MyComponent>,
+  </AppStateProvider>,
   document.getElementById("root")
 )

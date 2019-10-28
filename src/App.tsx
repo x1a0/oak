@@ -1,39 +1,59 @@
-import React, { useState, useCallback } from "react"
+import React, { FC } from "react"
+import styled from "styled-components"
 import "./App.css"
-import logo from "./logo.svg"
+import { useDispatch, useState } from "./app-state"
 
-const Button = ({ title }: { title: string }) => <button>{title}</button>
+// MyComp component
+const MyComp = styled.div`
+  background-color: #f0f;
+  color: #fff;
+  padding: 20px;
+  font-weight: bold;
+  text-decoration: underline;
+`
 
-const Title = ({
-  label,
-  description
-}: {
+// Title component
+type TitleProps = {
   label: string
   description: string
-}) => <h1>{label}</h1>
-
-const App: React.FC = () => (
-  <div className="App">
-    <header className="App-header">
-      <img src={logo} className="App-logo" alt="logo" />
-      <p>
-        Edit <code>src/App.tsx</code> and save to reload.
-      </p>
-
-      <Button title="Sliff" />
-      <Title label="Foo" description="" />
-
-      <Title label="Oh yeah" description="" />
-      <a
-        className="App-link"
-        href="https://reactjs.org"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        Learn React
-      </a>
-    </header>
+}
+const Title: FC<TitleProps> = ({ label, description }) => (
+  <div>
+    <h1>{label}</h1>
+    <h2>{description}</h2>
   </div>
 )
 
-export default App
+// Main component: App
+export const App: FC = () => {
+  const state = useState()
+  const dispatch = useDispatch()
+
+  return (
+    <div className="App">
+      <header className="App-header">
+        <p>
+          Edit <code>src/App.tsx</code> and save to reload.
+        </p>
+        <button onClick={() => dispatch({ type: "ADD", x: 1, y: 2 })}>
+          Press me
+        </button>
+        <p>Calculator: {state.result}</p>
+        <p>Http result: {state.httpResult}</p>
+        <p>Timeout done: {state.timeoutDone ? "yes" : "no"}</p>
+
+        <Title label="Foo" description="Nah, this was better" />
+        <MyComp>Testing</MyComp>
+        <Title label="Oh yeah 2" description="Yep, this is nicie" />
+        <a
+          className="App-link"
+          href="https://reactjs.org"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Learn React 2
+        </a>
+      </header>
+    </div>
+  )
+}
