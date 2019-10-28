@@ -1,5 +1,5 @@
 import React, { FC, useContext } from "react"
-import { useOak, Updater, httpGet, timeout, Cmd } from "./oak"
+import { useOak, Updater, httpGet, timeout, Cmd, Init } from "./oak"
 
 export const initialState = {
   result: 0,
@@ -10,11 +10,11 @@ export const initialState = {
 export type State = typeof initialState
 
 type Msg =
-  | { type: "TOGGLE" }
-  | { type: "ADD"; x: number; y: number }
+  | { type: "Add"; x: number; y: number }
   | { type: "GotResult"; data: string }
   | { type: "AfterTimeout" }
 
+const init: Init<State, Msg> = () => [initialState, "none"]
 export const fetchTodos: Cmd<Msg> = httpGet(
   {
     uri: "https://jsonplaceholder.typicode.com/todos/1"
@@ -28,9 +28,7 @@ export const addTimeout: Cmd<Msg> = timeout(2000, () => ({
 
 export const update: Updater<State, Msg> = (state, msg) => {
   switch (msg.type) {
-    case "TOGGLE":
-      return [state, "none"]
-    case "ADD":
+    case "Add":
       return [{ ...state, result: msg.x + msg.y }, addTimeout]
     case "GotResult":
       return [{ ...state, httpResult: msg.data }, "none"]
@@ -43,7 +41,7 @@ const DispatchContext = React.createContext((_: Msg) => {})
 const StateContext = React.createContext(initialState)
 
 export const AppStateProvider: FC = ({ children }) => {
-  const [state, dispatch] = useOak(update, initialState, true)
+  const [state, dispatch] = useOak(update, init, true)
 
   return (
     <DispatchContext.Provider value={dispatch}>
