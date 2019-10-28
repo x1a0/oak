@@ -1,13 +1,13 @@
 import React, { FC, useContext } from "react"
-import { useOak, Updater, httpGet, timeout } from "./oak"
+import { useOak, Updater, httpGet, timeout, Cmd } from "./oak"
 
-const initialState = {
+export const initialState = {
   result: 0,
   timeoutDone: false,
   httpResult: "not fetched"
 }
 
-type State = typeof initialState
+export type State = typeof initialState
 
 type Msg =
   | { type: "TOGGLE" }
@@ -15,29 +15,27 @@ type Msg =
   | { type: "GotResult"; data: string }
   | { type: "AfterTimeout" }
 
-const update: Updater<State, Msg> = (state, msg) => {
+export const fetchTodos: Cmd<Msg> = httpGet(
+  {
+    uri: "https://jsonplaceholder.typicode.com/todos/1"
+  },
+  ({ data }: { data: any }) => ({ type: "GotResult", data: data.title })
+)
+
+export const addTimeout: Cmd<Msg> = timeout(2000, () => ({
+  type: "AfterTimeout"
+}))
+
+export const update: Updater<State, Msg> = (state, msg) => {
   switch (msg.type) {
     case "TOGGLE":
       return [state, "none"]
     case "ADD":
-      return [
-        { ...state, result: msg.x + msg.y },
-        timeout(2000, () => ({
-          type: "AfterTimeout"
-        }))
-      ]
+      return [{ ...state, result: msg.x + msg.y }, addTimeout]
     case "GotResult":
       return [{ ...state, httpResult: msg.data }, "none"]
     case "AfterTimeout":
-      return [
-        { ...state, timeoutDone: true },
-        httpGet(
-          {
-            uri: "https://jsonplaceholder.typicode.com/todos/1"
-          },
-          ({ data }: { data: any }) => ({ type: "GotResult", data: data.title })
-        )
-      ]
+      return [{ ...state, timeoutDone: true }, fetchTodos]
   }
 }
 

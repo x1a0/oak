@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
-import { BehaviorSubject, Observable, Subject, timer } from "rxjs"
-import { map, withLatestFrom } from "rxjs/operators"
+import { Observable, Subject, timer } from "rxjs"
 import { ajax } from "rxjs/ajax"
+import { map, withLatestFrom } from "rxjs/operators"
 
 type CommandHandler<M> = () => Observable<M>
 
@@ -17,9 +17,10 @@ export const useOak = <S extends {}, M extends {}>(
   initial: S,
   log = false
 ): [S, Dispatch<M>] => {
-  const [state$] = useState(new BehaviorSubject<S>(initial))
+  const [state$] = useState(new Subject<S>())
   const [msg$] = useState(new Subject<M>())
 
+  // Used to trigger hook to re-emit values
   const [state, setState] = useState<S>(initial)
 
   useEffect(() => {
@@ -34,6 +35,8 @@ export const useOak = <S extends {}, M extends {}>(
         state$.next(newState)
       })
 
+    state$.next(initial)
+
     const stateSubscription = state$.subscribe(newState => {
       log && console.log("STATE:", newState)
       setState(newState)
@@ -43,7 +46,8 @@ export const useOak = <S extends {}, M extends {}>(
       combinedSubscription.unsubscribe()
       stateSubscription.unsubscribe()
     }
-  }, [state$, msg$, updateFunc, log])
+  }, // eslint-disable-next-line
+  [])
 
   const dispatch: Dispatch<M> = useCallback(
     (msg: M) => {
