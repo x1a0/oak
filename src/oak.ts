@@ -14,11 +14,15 @@ import {
 
 export type Cmd<M> = {
   name: string
-  opts?: any
+  opts?: object
   execute: (opts: any) => Observable<M>
 }
 
 export type Next<S, M> = { model: S; cmd?: Cmd<M> }
+export const next = <S, M>(model: S, cmd?: Cmd<M>) => ({
+  model: model,
+  cmd: cmd
+})
 export type Init<S, M> = () => Next<S, M>
 export type Updater<T, M> = (state: T, msg: M) => Next<T, M>
 

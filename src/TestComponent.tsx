@@ -1,5 +1,5 @@
 import React, { FC } from "react"
-import { useOak, Updater, httpGet, Cmd, Init, timeout } from "./oak"
+import { useOak, Updater, httpGet, Cmd, Init, timeout, next } from "./oak"
 
 type RemoteData<T> = "initial" | "loading" | T
 
@@ -30,9 +30,9 @@ const fetchPost: Cmd<Msg> = httpGet(
 const update: Updater<State, Msg> = (state, msg) => {
   switch (msg.type) {
     case "DelayDone":
-      return { model: { ...state, value: "loading" }, cmd: fetchPost }
+      return next({ ...state, value: "loading" }, fetchPost)
     case "Result":
-      return { model: { ...state, value: msg.value } }
+      return next({ ...state, value: msg.value })
   }
 }
 

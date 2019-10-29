@@ -1,5 +1,5 @@
 import React, { FC, useContext } from "react"
-import { useOak, Updater, httpGet, timeout, Cmd, Init } from "./oak"
+import { useOak, Updater, httpGet, timeout, Cmd, Init, next } from "./oak"
 
 export const initialState = {
   result: 0,
@@ -32,11 +32,11 @@ export const addTimeout: Cmd<Msg> = timeout(2000, () => ({
 export const update: Updater<State, Msg> = (state, msg) => {
   switch (msg.type) {
     case "Add":
-      return { model: { ...state, result: msg.x + msg.y }, cmd: addTimeout }
+      return next({ ...state, result: msg.x + msg.y }, addTimeout)
     case "GotResult":
-      return { model: { ...state, httpResult: msg.data } }
+      return next({ ...state, httpResult: msg.data })
     case "AfterTimeout":
-      return { model: { ...state, timeoutDone: true }, cmd: fetchTodos }
+      return next({ ...state, timeoutDone: true }, fetchTodos)
   }
 }
 
