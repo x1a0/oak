@@ -1,10 +1,20 @@
 import React, { FC } from "react"
 import styled from "styled-components"
 import "./App.css"
-import { useDispatch, useState } from "./app-state"
+import { useDispatch, useState, RemoteData, isFetched } from "./app-state"
 import { TestComponent } from "./TestComponent"
 
-const HttpResult = styled.p`
+type HttpResultProps = {
+  result: RemoteData<string>
+}
+const HttpResult: FC<HttpResultProps> = ({ result }) => {
+  if (!isFetched(result)) {
+    return <p>Not fetched: {result}</p>
+  }
+
+  return <p>{result}</p>
+}
+const StyledHttpResult = styled(HttpResult)`
   background-color: #f0f;
   padding: 10px;
 `
@@ -21,7 +31,7 @@ export const App: FC = () => {
           Press me to fetch data
         </button>
         <p>Calculator: {state.result}</p>
-        <HttpResult>Http result: {state.httpResult}</HttpResult>
+        <StyledHttpResult result={state.httpResult} />
         <p>Timeout done: {state.timeoutDone ? "yes" : "no"}</p>
         <TestComponent />
       </header>

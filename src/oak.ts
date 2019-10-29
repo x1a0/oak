@@ -12,37 +12,56 @@ import {
   withLatestFrom
 } from "rxjs/operators"
 
-export type Cmd<M> = {
+export type Cmd<Msg> = {
   name: string
   opts?: object
-  execute: (opts: any) => Observable<M>
+  execute: (opts: any) => Observable<Msg>
 }
 
-export type Next<S, M> = { model: S; cmd?: Cmd<M> }
-export const next = <S, M>(model: S, cmd?: Cmd<M>) => ({
-  model: model,
-  cmd: cmd
+type X = { a: string; b: number }
+type Y = { a: string; b: number }
+
+type Z = Exclude<keyof Y, keyof X> extends never ? {} : "Sliff"
+
+type StrictPropertyCheck<T, TExpected, TError> = Exclude<
+  keyof T,
+  keyof TExpected
+> extends never
+  ? {}
+  : TError
+
+export type Next<State, Msg> = { state: State; cmd?: Cmd<Msg> }
+
+// The state is strictly property checked for excess properties to give better
+// feedback when using without having to manually define the types
+export const next = <State, Msg, T extends State = State>(
+  state: T &
+    StrictPropertyCheck<T, State, "Passed in invalid state properties">,
+  cmd?: Cmd<Msg>
+): Next<State, Msg> => ({
+  state,
+  cmd
 })
-export type Init<S, M> = () => Next<S, M>
-export type Updater<T, M> = (state: T, msg: M) => Next<T, M>
+export type Init<State, Msg> = () => Next<State, Msg>
+export type Updater<State, Msg> = (state: State, msg: Msg) => Next<State, Msg>
 
-export type Dispatch<T> = (msg: T) => void
+export type Dispatch<Msg> = (msg: Msg) => void
 
-function isCmd<M>(cmd?: Cmd<M>): cmd is Cmd<M> {
+function isCmd<Msg>(cmd?: Cmd<Msg>): cmd is Cmd<Msg> {
   return !!cmd
 }
 
-export const useOak = <S extends {}, M extends {}>(
-  updateFunc: Updater<S, M>,
-  init: Init<S, M>,
+export function useOak<State, Msg>(
+  updateFunc: Updater<State, Msg>,
+  init: Init<State, Msg>,
   log = false
-): [S, Dispatch<M>] => {
-  const { model: initialValue, cmd: initialCmd } = init()
-  const [state$] = useState(new Subject<S>())
-  const [msg$] = useState(new Subject<M>())
+): [State, Dispatch<Msg>] {
+  const { state: initialValue, cmd: initialCmd } = init()
+  const [state$] = useState(new Subject<State>())
+  const [msg$] = useState(new Subject<Msg>())
 
   // Used to trigger hook to re-emit values
-  const [state, setState] = useState<S>(initialValue)
+  const [state, setState] = useState<State>(initialValue)
 
   useEffect(() => {
     const next$ = msg$.pipe(
@@ -57,11 +76,11 @@ export const useOak = <S extends {}, M extends {}>(
       .pipe(
         map(({ cmd }) => cmd),
         filter(isCmd),
-        mergeMap((cmd: Cmd<M>) => cmd.execute(cmd.opts))
+        mergeMap((cmd: Cmd<Msg>) => cmd.execute(cmd.opts))
       )
       .subscribe(msg$)
 
-    next$.pipe(map(next => next.model)).subscribe(state$)
+    next$.pipe(map(next => next.state)).subscribe(state$)
 
     const stateSubscription = state$
       .pipe(distinctUntilChanged())
@@ -80,8 +99,8 @@ export const useOak = <S extends {}, M extends {}>(
     // eslint-disable-next-line
   }, [])
 
-  const dispatch: Dispatch<M> = useCallback(
-    (msg: M) => {
+  const dispatch: Dispatch<Msg> = useCallback(
+    (msg: Msg) => {
       msg$.next(msg)
     },
     [msg$]

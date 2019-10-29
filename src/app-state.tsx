@@ -1,10 +1,16 @@
 import React, { FC, useContext } from "react"
 import { useOak, Updater, httpGet, timeout, Cmd, Init, next } from "./oak"
 
+export type RemoteData<T> = "initial" | "loading" | T
+
+export function isFetched<T>(remote: RemoteData<T>): remote is T {
+  return remote !== "initial" && remote !== "loading"
+}
+
 export const initialState = {
   result: 0,
   timeoutDone: false,
-  httpResult: "not fetched"
+  httpResult: "initial" as RemoteData<string>
 }
 
 export type State = typeof initialState
@@ -15,7 +21,7 @@ type Msg =
   | { type: "AfterTimeout" }
 
 const init: Init<State, Msg> = () => ({
-  model: initialState
+  state: initialState
 })
 
 export const fetchTodos: Cmd<Msg> = httpGet(
@@ -32,11 +38,15 @@ export const addTimeout: Cmd<Msg> = timeout(2000, () => ({
 export const update: Updater<State, Msg> = (state, msg) => {
   switch (msg.type) {
     case "Add":
-      return next({ ...state, result: msg.x + msg.y }, addTimeout)
+      return next(
+        { ...state, result: msg.x + msg.y },
+        !state.timeoutDone ? addTimeout : undefined
+      )
     case "GotResult":
       return next({ ...state, httpResult: msg.data })
     case "AfterTimeout":
-      return next({ ...state, timeoutDone: true }, fetchTodos)
+      const cmd = state.httpResult === "initial" ? fetchTodos : undefined
+      return next({ ...state, timeoutDone: true, httpResult: "loading" }, cmd)
   }
 }
 
