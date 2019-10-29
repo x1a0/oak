@@ -13,12 +13,12 @@ const initialState = {
 
 type State = typeof initialState
 
-const init: Init<State, Msg> = () => [
-  initialState,
-  timeout(1000, () => ({
+const init: Init<State, Msg> = () => ({
+  model: initialState,
+  cmd: timeout(1000, () => ({
     type: "DelayDone"
   }))
-]
+})
 
 type Msg = { type: "DelayDone" } | { type: "Result"; value: string }
 
@@ -30,9 +30,9 @@ const fetchPost: Cmd<Msg> = httpGet(
 const update: Updater<State, Msg> = (state, msg) => {
   switch (msg.type) {
     case "DelayDone":
-      return [{ ...state, value: "loading" }, fetchPost]
+      return { model: { ...state, value: "loading" }, cmd: fetchPost }
     case "Result":
-      return [{ ...state, value: msg.value }, "none"]
+      return { model: { ...state, value: msg.value } }
   }
 }
 

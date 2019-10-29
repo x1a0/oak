@@ -14,7 +14,10 @@ type Msg =
   | { type: "GotResult"; data: string }
   | { type: "AfterTimeout" }
 
-const init: Init<State, Msg> = () => [initialState, "none"]
+const init: Init<State, Msg> = () => ({
+  model: initialState
+})
+
 export const fetchTodos: Cmd<Msg> = httpGet(
   {
     uri: "https://jsonplaceholder.typicode.com/todos/1"
@@ -29,11 +32,11 @@ export const addTimeout: Cmd<Msg> = timeout(2000, () => ({
 export const update: Updater<State, Msg> = (state, msg) => {
   switch (msg.type) {
     case "Add":
-      return [{ ...state, result: msg.x + msg.y }, addTimeout]
+      return { model: { ...state, result: msg.x + msg.y }, cmd: addTimeout }
     case "GotResult":
-      return [{ ...state, httpResult: msg.data }, "none"]
+      return { model: { ...state, httpResult: msg.data } }
     case "AfterTimeout":
-      return [{ ...state, timeoutDone: true }, fetchTodos]
+      return { model: { ...state, timeoutDone: true }, cmd: fetchTodos }
   }
 }
 

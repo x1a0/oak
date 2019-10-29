@@ -2,34 +2,38 @@ import { useCallback, useEffect, useState } from "react"
 import { Observable, Subject, timer } from "rxjs"
 import { ajax } from "rxjs/ajax"
 import {
+  delay,
   distinctUntilChanged,
   filter,
   map,
   mergeMap,
   share,
   tap,
-  withLatestFrom,
-  delay
+  withLatestFrom
 } from "rxjs/operators"
 
-type CommandHandler<M> = () => Observable<M>
+export type Cmd<M> = {
+  name: string
+  opts?: any
+  execute: (opts: any) => Observable<M>
+}
 
-export type Cmd<M> = "none" | CommandHandler<M>
-export type Init<S, M> = () => [S, Cmd<M>]
-export type Updater<T, M> = (state: T, msg: M) => [T, Cmd<M>]
+export type Next<S, M> = { model: S; cmd?: Cmd<M> }
+export type Init<S, M> = () => Next<S, M>
+export type Updater<T, M> = (state: T, msg: M) => Next<T, M>
 
 export type Dispatch<T> = (msg: T) => void
 
-export function isCommandHandler<M>(cmd: Cmd<M>): cmd is CommandHandler<M> {
-  return cmd !== "none"
+function isCmd<M>(cmd?: Cmd<M>): cmd is Cmd<M> {
+  return !!cmd
 }
 
 export const useOak = <S extends {}, M extends {}>(
   updateFunc: Updater<S, M>,
-  init: () => [S, Cmd<M>],
+  init: Init<S, M>,
   log = false
 ): [S, Dispatch<M>] => {
-  const [initialValue, initialCmd] = init()
+  const { model: initialValue, cmd: initialCmd } = init()
   const [state$] = useState(new Subject<S>())
   const [msg$] = useState(new Subject<M>())
 
@@ -41,19 +45,19 @@ export const useOak = <S extends {}, M extends {}>(
       tap(msg => log && console.log("Msg:", msg)),
       withLatestFrom(state$),
       map(([msg, state]) => updateFunc(state, msg)),
-      tap(([newState]) => log && console.log("State:", newState)),
+      tap(next => log && console.log("Update returned:", next)),
       share()
     )
 
     next$
       .pipe(
-        map(([_newState, cmd]) => cmd),
-        filter(isCommandHandler),
-        mergeMap(cmd => cmd())
+        map(({ cmd }) => cmd),
+        filter(isCmd),
+        mergeMap((cmd: Cmd<M>) => cmd.execute(cmd.opts))
       )
       .subscribe(msg$)
 
-    next$.pipe(map(([newState, _cmd]) => newState)).subscribe(state$)
+    next$.pipe(map(next => next.model)).subscribe(state$)
 
     const stateSubscription = state$
       .pipe(distinctUntilChanged())
@@ -62,7 +66,8 @@ export const useOak = <S extends {}, M extends {}>(
       })
 
     // Prime the initials
-    initialCmd !== "none" && initialCmd().subscribe(m => msg$.next(m))
+    initialCmd &&
+      initialCmd.execute(initialCmd.opts).subscribe(m => msg$.next(m))
     state$.next(initialValue)
 
     return () => {
@@ -96,15 +101,19 @@ type HttpGetResult = {
 export const httpGet = <M>(
   opts: HttpGetOpts,
   msgCreator: (r: HttpGetResult) => M
-): Cmd<M> => () =>
-  ajax(opts.uri).pipe(
-    delay(1000), // For testing purposes
-    map(res => msgCreator({ data: res.response }))
-  )
+): Cmd<M> => ({
+  name: "http.get",
+  opts: opts,
+  execute: o =>
+    ajax(o.uri).pipe(
+      delay(1000), // For testing purposes
+      map(res => msgCreator({ data: res.response }))
+    )
+})
 
 // Timeout
 type TimeoutOpts = { duration: number }
-export const timeout = <M>(
-  duration: number,
-  msgCreator: () => M
-): Cmd<M> => () => timer(duration).pipe(map(() => msgCreator()))
+export const timeout = <M>(duration: number, msgCreator: () => M): Cmd<M> => ({
+  name: "timeout",
+  execute: () => timer(duration).pipe(map(() => msgCreator()))
+})
