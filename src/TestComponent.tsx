@@ -1,5 +1,5 @@
 import React, { FC, useCallback } from "react"
-import { Cmd, httpGet, Init, next, timeout, Updater, useOak } from "./oak"
+import { Effect, httpGet, Init, next, timeout, Updater, useOak } from "./oak"
 
 type RemoteData<T> = "initial" | "loading" | T
 
@@ -13,24 +13,24 @@ const initialState = {
 }
 type State = typeof initialState
 
-const init: Init<State, Msg> = () => ({
+const init: Init<State, TestEvent> = () => ({
   state: initialState,
   cmd: timeout(1000, () => ({
     type: "DelayDone"
   }))
 })
 
-type Msg =
+type TestEvent =
   | { type: "DelayDone" }
   | { type: "Result"; value: string }
   | { type: "Foobar" }
 
-const fetchPost: Cmd<Msg> = httpGet(
+const fetchPost: Effect<TestEvent> = httpGet(
   { uri: "https://jsonplaceholder.typicode.com/posts/1" },
   ({ data }: { data: any }) => ({ type: "Result", value: data.title })
 )
 
-const update: Updater<State, Msg> = (state, msg) => {
+const update: Updater<State, TestEvent> = (state, msg) => {
   switch (msg.type) {
     case "DelayDone":
       return next({ ...state, value: "loading" }, fetchPost)

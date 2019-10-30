@@ -1,5 +1,5 @@
 import React, { FC, useContext } from "react"
-import { useOak, Updater, httpGet, timeout, Cmd, Init, next } from "./oak"
+import { useOak, Updater, httpGet, timeout, Effect, Init, next } from "./oak"
 
 export type RemoteData<T> = "initial" | "loading" | T
 
@@ -15,27 +15,27 @@ export const initialState = {
 
 export type State = typeof initialState
 
-type Msg =
+type AppEvent =
   | { type: "Add"; x: number; y: number }
   | { type: "GotResult"; data: string }
   | { type: "AfterTimeout" }
 
-const init: Init<State, Msg> = () => ({
+const init: Init<State, AppEvent> = () => ({
   state: initialState
 })
 
-export const fetchTodos: Cmd<Msg> = httpGet(
+export const fetchTodos: Effect<AppEvent> = httpGet(
   {
     uri: "https://jsonplaceholder.typicode.com/todos/1"
   },
   ({ data }: { data: any }) => ({ type: "GotResult", data: data.title })
 )
 
-export const addTimeout: Cmd<Msg> = timeout(2000, () => ({
+export const addTimeout: Effect<AppEvent> = timeout(2000, () => ({
   type: "AfterTimeout"
 }))
 
-export const update: Updater<State, Msg> = (state, msg) => {
+export const update: Updater<State, AppEvent> = (state, msg) => {
   switch (msg.type) {
     case "Add":
       return next(
@@ -50,7 +50,7 @@ export const update: Updater<State, Msg> = (state, msg) => {
   }
 }
 
-const DispatchContext = React.createContext((_: Msg) => {})
+const DispatchContext = React.createContext((_: AppEvent) => {})
 const StateContext = React.createContext(initialState)
 
 export const AppStateProvider: FC = ({ children }) => {

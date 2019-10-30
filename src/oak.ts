@@ -12,10 +12,10 @@ import {
   withLatestFrom
 } from "rxjs/operators"
 
-export type Cmd<Msg> = {
+export type Effect<Event> = {
   name: string
   opts?: object
-  execute: (opts: any) => Observable<Msg>
+  execute: (opts: any) => Observable<Event>
 }
 
 type X = { a: string; b: number }
@@ -30,46 +30,49 @@ type StrictPropertyCheck<T, TExpected, TError> = Exclude<
   ? {}
   : TError
 
-export type Next<State, Msg> = { state: State; cmd?: Cmd<Msg> }
+export type Next<State, Event> = { state: State; cmd?: Effect<Event> }
 
 // The state is strictly property checked for excess properties to give better
 // feedback when using without having to manually define the types
-export const next = <State, Msg, T extends State = State>(
+export const next = <State, Event, T extends State = State>(
   state: T &
     StrictPropertyCheck<
       T,
       State,
-      "Passed in invalid state properties, use next<State, Msg>() for more descriptive error"
+      "Passed in invalid state properties, use next<State, Event>() for more descriptive error"
     >,
-  cmd?: Cmd<Msg>
-): Next<State, Msg> => ({
+  cmd?: Effect<Event>
+): Next<State, Event> => ({
   state,
   cmd
 })
-export type Init<State, Msg> = () => Next<State, Msg>
-export type Updater<State, Msg> = (state: State, msg: Msg) => Next<State, Msg>
+export type Init<State, Event> = () => Next<State, Event>
+export type Updater<State, Event> = (
+  state: State,
+  msg: Event
+) => Next<State, Event>
 
-export type Dispatch<Msg> = (msg: Msg) => void
+export type Dispatch<Event> = (msg: Event) => void
 
-function isCmd<Msg>(cmd?: Cmd<Msg>): cmd is Cmd<Msg> {
+function isCmd<Event>(cmd?: Effect<Event>): cmd is Effect<Event> {
   return !!cmd
 }
 
-export function useOak<State, Msg>(
-  updateFunc: Updater<State, Msg>,
-  init: Init<State, Msg>,
+export function useOak<State, Event>(
+  updateFunc: Updater<State, Event>,
+  init: Init<State, Event>,
   log = false
-): [State, Dispatch<Msg>] {
+): [State, Dispatch<Event>] {
   const { state: initialValue, cmd: initialCmd } = init()
   const [state$] = useState(new Subject<State>())
-  const [msg$] = useState(new Subject<Msg>())
+  const [msg$] = useState(new Subject<Event>())
 
   // Used to trigger hook to re-emit values
   const [state, setState] = useState<State>(initialValue)
 
   useEffect(() => {
     const next$ = msg$.pipe(
-      tap(msg => log && console.log("Msg:", msg)),
+      tap(msg => log && console.log("Event:", msg)),
       withLatestFrom(state$),
       map(([msg, state]) => updateFunc(state, msg)),
       tap(next => log && console.log("Update returned:", next)),
@@ -80,7 +83,7 @@ export function useOak<State, Msg>(
       .pipe(
         map(({ cmd }) => cmd),
         filter(isCmd),
-        mergeMap((cmd: Cmd<Msg>) => cmd.execute(cmd.opts))
+        mergeMap((cmd: Effect<Event>) => cmd.execute(cmd.opts))
       )
       .subscribe(msg$)
 
@@ -103,8 +106,8 @@ export function useOak<State, Msg>(
     // eslint-disable-next-line
   }, [])
 
-  const dispatch: Dispatch<Msg> = useCallback(
-    (msg: Msg) => {
+  const dispatch: Dispatch<Event> = useCallback(
+    (msg: Event) => {
       msg$.next(msg)
     },
     [msg$]
@@ -128,7 +131,7 @@ type HttpGetResult = {
 export const httpGet = <M>(
   opts: HttpGetOpts,
   msgCreator: (r: HttpGetResult) => M
-): Cmd<M> => ({
+): Effect<M> => ({
   name: "http.get",
   opts: opts,
   execute: o =>
@@ -140,7 +143,10 @@ export const httpGet = <M>(
 
 // Timeout
 type TimeoutOpts = { duration: number }
-export const timeout = <M>(duration: number, msgCreator: () => M): Cmd<M> => ({
+export const timeout = <M>(
+  duration: number,
+  msgCreator: () => M
+): Effect<M> => ({
   name: "timeout",
   execute: () => timer(duration).pipe(map(() => msgCreator()))
 })
