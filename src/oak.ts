@@ -36,7 +36,11 @@ export type Next<State, Msg> = { state: State; cmd?: Cmd<Msg> }
 // feedback when using without having to manually define the types
 export const next = <State, Msg, T extends State = State>(
   state: T &
-    StrictPropertyCheck<T, State, "Passed in invalid state properties">,
+    StrictPropertyCheck<
+      T,
+      State,
+      "Passed in invalid state properties, use next<State, Msg>() for more descriptive error"
+    >,
   cmd?: Cmd<Msg>
 ): Next<State, Msg> => ({
   state,
