@@ -13,23 +13,23 @@ const initialState = {
 }
 type State = typeof initialState
 
-const init: Init<State, TestAction> = next(
+const init: Init<State, Action> = next(
   initialState,
   timeout(1000, () => ({ type: "DelayDone" }))
 )
 
-type TestAction =
+type Action =
   | { type: "DelayDone" }
   | { type: "Result"; value: string }
   | { type: "Foobar" }
 
-const fetchPost = makeEffect<TestAction>("fetchPost", () =>
+const fetchPost = makeEffect<Action>("fetchPost", () =>
   fetch("https://jsonplaceholder.typicode.com/posts/1")
     .then(response => response.json())
     .then(json => ({ type: "Result", value: json.title }))
 )
 
-const update: Update<State, TestAction> = (state, msg) => {
+const update: Update<State, Action> = (state, msg) => {
   switch (msg.type) {
     case "DelayDone":
       return next({ ...state, value: "loading" }, fetchPost)

@@ -58,7 +58,9 @@ export const next = <State, Action, T extends State = State>(
   state,
   effect
 })
-export type Init<State, Action> = Next<State, Action> | (() => Next<State, Action>)
+export type Init<State, Action> =
+  | Next<State, Action>
+  | (() => Next<State, Action>)
 export type Update<State, Action> = (
   state: State,
   msg: Action
