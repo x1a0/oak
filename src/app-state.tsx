@@ -31,6 +31,14 @@ export const fetchTodos: Effect<AppEvent> = httpGet(
   ({ data }: { data: any }) => ({ type: "GotResult", data: data.title })
 )
 
+export const promiseTimeout: Effect<AppEvent> = {
+  name: "PromiseTime",
+  execute: () =>
+    new Promise(resolve =>
+      setTimeout(() => resolve({ type: "AfterTimeout" }), 2000)
+    )
+}
+
 export const addTimeout: Effect<AppEvent> = timeout(2000, () => ({
   type: "AfterTimeout"
 }))
@@ -40,7 +48,7 @@ export const update: Updater<State, AppEvent> = (state, msg) => {
     case "Add":
       return next(
         { ...state, result: msg.x + msg.y },
-        !state.timeoutDone ? addTimeout : undefined
+        !state.timeoutDone ? promiseTimeout : undefined
       )
     case "GotResult":
       return next({ ...state, httpResult: msg.data })
