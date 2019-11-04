@@ -1,7 +1,7 @@
-import React, { useCallback, FC } from "react"
-import { makeEffect, Init, next, Update, useOak } from "./oak"
-import { timer } from "rxjs"
+import React, { FC, useCallback } from "react"
+import { Observable } from "rxjs"
 import { map } from "rxjs/operators"
+import { EffectHandler, Init, next, Update, useOak } from "./oak"
 
 type RemoteData<T> = "initial" | "loading" | T
 
@@ -16,6 +16,7 @@ const initialState = {
 type State = typeof initialState
 
 // Timeout
+/*
 export const timeout = <Action extends {}>(
   duration: number,
   msgCreator: () => Action
@@ -29,21 +30,23 @@ const fetchPost = makeEffect<Action>("fetchPost", () =>
     .then(response => response.json())
     .then(json => ({ type: "Result", value: json.title }))
 )
-
-const init: Init<State, Action> = next(
-  initialState,
-  timeout(1000, () => ({ type: "DelayDone" }))
-)
+*/
+const init: Init<State, Effect> = next(initialState, {
+  type: "Timeout",
+  duration: 1000
+})
 
 type Action =
   | { type: "DelayDone" }
   | { type: "Result"; value: string }
   | { type: "ButtonClicked" }
 
-const update: Update<State, Action> = (state, msg) => {
+type Effect = { type: "FetchPost" } | { type: "Timeout"; duration: number }
+
+const update: Update<State, Action, Effect> = (state, msg) => {
   switch (msg.type) {
     case "DelayDone":
-      return next({ ...state, value: "loading" }, fetchPost)
+      return next({ ...state, value: "loading" }, { type: "FetchPost" })
     case "Result":
       return next({ ...state, value: msg.value })
     case "ButtonClicked":
@@ -51,8 +54,17 @@ const update: Update<State, Action> = (state, msg) => {
   }
 }
 
+const effectHandler: EffectHandler<Effect, Action> = (
+  effect$: Observable<Effect>
+) =>
+  effect$.pipe(
+    map(() => ({
+      type: "DelayDone"
+    }))
+  )
+
 export const TestComponent: FC = () => {
-  const [state, dispatch] = useOak(update, init, { log: true })
+  const [state, dispatch] = useOak(init, update, effectHandler, { log: true })
   const clicked = useCallback(() => dispatch({ type: "ButtonClicked" }), [
     dispatch
   ])

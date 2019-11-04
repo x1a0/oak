@@ -1,7 +1,7 @@
 import React, { FC, useContext } from "react"
-import { ajax } from "rxjs/ajax"
-import { delay, map } from "rxjs/operators"
-import { Init, makeEffect, next, Update, useOak } from "./oak"
+import { delay, filter, mergeMap } from "rxjs/operators"
+import { Init, next, Update, useOak, EffectHandler } from "./oak"
+import { Observable, of } from "rxjs"
 
 export type RemoteData<T> = "initial" | "loading" | T
 
@@ -21,9 +21,13 @@ type AppAction =
   | { type: "Add"; x: number; y: number }
   | { type: "GotResult"; data: string }
   | { type: "AfterTimeout" }
+  | { type: "Stop" }
 
-const init: Init<State, AppAction> = next(initialState)
+type AppEffect = { type: "FetchTodos" } | { type: "Timeout"; duration: number }
 
+const init: Init<State, AppEffect> = next(initialState)
+
+/*
 export const fetchTodos = makeEffect<AppAction>("fetchTodos", () =>
   ajax("https://jsonplaceholder.typicode.com/todos/1").pipe(
     delay(1000),
@@ -42,24 +46,43 @@ export const promiseTimeout = (duration: number) =>
       duration
     }
   )
-
-export const update: Update<State, AppAction> = (state, msg) => {
+*/
+export const update: Update<State, AppAction, AppEffect> = (state, msg) => {
   switch (msg.type) {
     case "Add":
-      return next({ ...state, result: msg.x + msg.y }, promiseTimeout(2000))
+      return next<State, AppEffect>(
+        { ...state, result: msg.x + msg.y },
+        { type: "Timeout", duration: 2000 }
+      )
     case "GotResult":
       return next({ ...state, httpResult: msg.data })
     case "AfterTimeout":
-      const cmd = state.httpResult === "initial" ? fetchTodos : undefined
-      return next({ ...state, timeoutDone: true, httpResult: "loading" }, cmd)
+      const cmd: AppEffect | undefined =
+        state.httpResult === "initial" ? { type: "FetchTodos" } : undefined
+      return next<State, AppEffect>(
+        { ...state, timeoutDone: true, httpResult: "loading" },
+        cmd
+      )
+    case "Stop":
+      return next(state)
   }
 }
+
+export const effectHandler: EffectHandler<AppEffect, AppAction> = (
+  effect$: Observable<AppEffect>
+) =>
+  effect$.pipe(
+    filter((effect: any) => effect.type === "Timeout"),
+    mergeMap((effect: { type: "Timeout"; duration: number }) =>
+      of({ type: "AfterTimeout" } as AppAction).pipe(delay(effect.duration))
+    )
+  )
 
 const DispatchContext = React.createContext((_: AppAction) => {})
 const StateContext = React.createContext(initialState)
 
 export const AppStateProvider: FC = ({ children }) => {
-  const [state, dispatch] = useOak(update, init, { log: true })
+  const [state, dispatch] = useOak(init, update, effectHandler, { log: true })
 
   return (
     <DispatchContext.Provider value={dispatch}>
