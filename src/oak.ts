@@ -53,7 +53,7 @@ export const next = <State, Event, T extends State = State>(
   cmd
 })
 export type Init<State, Event> = () => Next<State, Event>
-export type Updater<State, Event> = (
+export type Update<State, Event> = (
   state: State,
   msg: Event
 ) => Next<State, Event>
@@ -65,7 +65,7 @@ function isCmd<Event>(cmd?: Effect<Event>): cmd is Effect<Event> {
 }
 
 export function useOak<State, Event>(
-  updateFunc: Updater<State, Event>,
+  updateFunc: Update<State, Event>,
   init: Init<State, Event>,
   log = false
 ): [State, Dispatch<Event>] {

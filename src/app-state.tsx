@@ -1,5 +1,5 @@
 import React, { FC, useContext } from "react"
-import { useOak, Updater, httpGet, timeout, Effect, Init, next } from "./oak"
+import { useOak, Update, httpGet, timeout, Effect, Init, next } from "./oak"
 
 export type RemoteData<T> = "initial" | "loading" | T
 
@@ -43,7 +43,7 @@ export const addTimeout: Effect<AppEvent> = timeout(2000, () => ({
   type: "AfterTimeout"
 }))
 
-export const update: Updater<State, AppEvent> = (state, msg) => {
+export const update: Update<State, AppEvent> = (state, msg) => {
   switch (msg.type) {
     case "Add":
       return next(

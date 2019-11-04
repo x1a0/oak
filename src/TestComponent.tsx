@@ -1,5 +1,5 @@
 import React, { FC, useCallback } from "react"
-import { Effect, httpGet, Init, next, timeout, Updater, useOak } from "./oak"
+import { Effect, Init, next, timeout, Update, useOak } from "./oak"
 
 type RemoteData<T> = "initial" | "loading" | T
 
@@ -33,7 +33,7 @@ const fetchPost: Effect<TestEvent> = {
       .then(json => ({ type: "Result", value: json.title }))
 }
 
-const update: Updater<State, TestEvent> = (state, msg) => {
+const update: Update<State, TestEvent> = (state, msg) => {
   switch (msg.type) {
     case "DelayDone":
       return next({ ...state, value: "loading" }, fetchPost)
