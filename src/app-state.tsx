@@ -23,9 +23,7 @@ type AppAction =
 const init: Init<State, AppAction> = next(initialState)
 
 export const fetchTodos = httpGet<AppAction>(
-  {
-    uri: "https://jsonplaceholder.typicode.com/todos/1"
-  },
+  "https://jsonplaceholder.typicode.com/todos/1",
   ({ data }: { data: any }) => ({ type: "GotResult", data: data.title })
 )
 

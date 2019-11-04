@@ -76,6 +76,51 @@ export type OakOptions = {
   log?: boolean
 }
 
+export const setupOak = <State, Action>(
+  updateFunc: Update<State, Action>,
+  initialState: State,
+  initialEffect?: Effect<Action>,
+  opts?: OakOptions
+): [Observable<State>, Dispatch<Action>] => {
+  const log = (opts && opts.log) || false
+
+  const action$ = new Subject<Action>()
+  const state$ = new Subject<State>()
+
+  const next$ = action$.pipe(
+    withLatestFrom(state$),
+    tap(([msg, state]) => console.log("calling update:", msg, state)),
+    map(([msg, state]) => updateFunc(state, msg)),
+    tap(next => log && console.log("Update returned:", next)),
+    share()
+  )
+
+  next$
+    .pipe(
+      map(({ effect }) => effect),
+      filter(isEffect),
+      mergeMap((effect: Effect<Action>) =>
+        observableFromEffectResult(effect.run())
+      )
+    )
+    .subscribe(action$)
+
+  next$.pipe(map(next => next.state)).subscribe(state$)
+
+  // Prime the initials
+  initialEffect &&
+    observableFromEffectResult(initialEffect.run()).subscribe(m =>
+      action$.next(m)
+    )
+  state$.next(initialState)
+
+  const dispatch: Dispatch<Action> = (msg: Action) => {
+    action$.next(msg)
+  }
+
+  return [state$.pipe(distinctUntilChanged()), dispatch]
+}
+
 export const useOak = <State, Action>(
   updateFunc: Update<State, Action>,
   init: Init<State, Action>,
@@ -83,47 +128,20 @@ export const useOak = <State, Action>(
 ): [State, Dispatch<Action>] => {
   const { state: initialValue, effect: initialEffect } =
     typeof init === "function" ? init() : init
-  const [state$] = useState(new Subject<State>())
-  const [msg$] = useState(new Subject<Action>())
-
   // Used to trigger hook to re-emit values
   const [state, setState] = useState<State>(initialValue)
-
-  const log = (opts && opts.log) || false
+  const [oakDispatch, setOakDispatch] = useState<{ d: Dispatch<Action> }>({
+    d: () => {}
+  })
 
   useEffect(() => {
-    const next$ = msg$.pipe(
-      tap(msg => log && console.log("Action:", msg)),
-      withLatestFrom(state$),
-      map(([msg, state]) => updateFunc(state, msg)),
-      tap(next => log && console.log("Update returned:", next)),
-      share()
-    )
+    const [state$, d] = setupOak(updateFunc, initialValue, initialEffect, opts)
 
-    next$
-      .pipe(
-        map(({ effect }) => effect),
-        filter(isEffect),
-        mergeMap((effect: Effect<Action>) =>
-          observableFromEffectResult(effect.run())
-        )
-      )
-      .subscribe(msg$)
+    setOakDispatch({ d })
 
-    next$.pipe(map(next => next.state)).subscribe(state$)
-
-    const stateSubscription = state$
-      .pipe(distinctUntilChanged())
-      .subscribe(newState => {
-        setState(newState)
-      })
-
-    // Prime the initials
-    initialEffect &&
-      observableFromEffectResult(initialEffect.run()).subscribe(m =>
-        msg$.next(m)
-      )
-    state$.next(initialValue)
+    const stateSubscription = state$.subscribe(newState => {
+      setState(newState)
+    })
 
     return () => {
       stateSubscription.unsubscribe()
@@ -133,9 +151,9 @@ export const useOak = <State, Action>(
 
   const dispatch: Dispatch<Action> = useCallback(
     (msg: Action) => {
-      msg$.next(msg)
+      oakDispatch.d(msg)
     },
-    [msg$]
+    [oakDispatch]
   )
 
   return [state, dispatch]
@@ -145,23 +163,22 @@ export const useOak = <State, Action>(
 // --------
 
 // HTTP get
-type HttpGetOpts = {
-  uri: string
-}
-
 type HttpGetResult = {
   data: string
 }
 
 export const httpGet = <M>(
-  opts: HttpGetOpts,
+  uri: string,
   msgCreator: (r: HttpGetResult) => M
-): Effect<M> =>
-  makeEffect("http.get", () =>
-    ajax(opts.uri).pipe(
-      delay(1000), // For testing purposes
-      map(res => msgCreator({ data: res.response }))
-    )
+): Effect<M, { uri: string }> =>
+  makeEffect(
+    "http.get",
+    () =>
+      ajax(uri).pipe(
+        delay(1000), // For testing purposes
+        map(res => msgCreator(res.response))
+      ),
+    { uri }
   )
 
 // Timeout
