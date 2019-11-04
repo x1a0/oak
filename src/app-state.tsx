@@ -60,7 +60,7 @@ const DispatchContext = React.createContext((_: AppEvent) => {})
 const StateContext = React.createContext(initialState)
 
 export const AppStateProvider: FC = ({ children }) => {
-  const [state, dispatch] = useOak(update, init, true)
+  const [state, dispatch] = useOak(update, init, { log: true })
 
   return (
     <DispatchContext.Provider value={dispatch}>

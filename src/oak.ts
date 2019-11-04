@@ -64,11 +64,15 @@ function isCmd<Event>(cmd?: Effect<Event>): cmd is Effect<Event> {
   return !!cmd
 }
 
-export function useOak<State, Event>(
+export type OakOptions = {
+  log?: boolean
+}
+
+export const useOak = <State, Event>(
   updateFunc: Update<State, Event>,
   init: Init<State, Event>,
-  log = false
-): [State, Dispatch<Event>] {
+  opts?: OakOptions
+): [State, Dispatch<Event>] => {
   const { state: initialValue, cmd: initialCmd } =
     typeof init === "function" ? init() : init
   const [state$] = useState(new Subject<State>())
@@ -76,6 +80,8 @@ export function useOak<State, Event>(
 
   // Used to trigger hook to re-emit values
   const [state, setState] = useState<State>(initialValue)
+
+  const log = (opts && opts.log) || false
 
   useEffect(() => {
     const next$ = msg$.pipe(

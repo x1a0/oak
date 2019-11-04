@@ -43,7 +43,7 @@ const update: Update<State, TestEvent> = (state, msg) => {
 }
 
 export const TestComponent: FC = () => {
-  const [state, dispatch] = useOak(update, init, true)
+  const [state, dispatch] = useOak(update, init, { log: true })
   const cb = useCallback(() => dispatch({ type: "Foobar" }), [dispatch])
 
   if (state.value === "initial") {
