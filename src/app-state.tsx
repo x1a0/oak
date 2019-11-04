@@ -20,9 +20,7 @@ type AppEvent =
   | { type: "GotResult"; data: string }
   | { type: "AfterTimeout" }
 
-const init: Init<State, AppEvent> = () => ({
-  state: initialState
-})
+const init: Init<State, AppEvent> = next(initialState)
 
 export const fetchTodos: Effect<AppEvent> = httpGet(
   {

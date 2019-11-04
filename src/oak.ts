@@ -52,7 +52,7 @@ export const next = <State, Event, T extends State = State>(
   state,
   cmd
 })
-export type Init<State, Event> = () => Next<State, Event>
+export type Init<State, Event> = Next<State, Event> | (() => Next<State, Event>)
 export type Update<State, Event> = (
   state: State,
   msg: Event
@@ -69,7 +69,8 @@ export function useOak<State, Event>(
   init: Init<State, Event>,
   log = false
 ): [State, Dispatch<Event>] {
-  const { state: initialValue, cmd: initialCmd } = init()
+  const { state: initialValue, cmd: initialCmd } =
+    typeof init === "function" ? init() : init
   const [state$] = useState(new Subject<State>())
   const [msg$] = useState(new Subject<Event>())
 

@@ -13,12 +13,10 @@ const initialState = {
 }
 type State = typeof initialState
 
-const init: Init<State, TestEvent> = () => ({
-  state: initialState,
-  cmd: timeout(1000, () => ({
-    type: "DelayDone"
-  }))
-})
+const init: Init<State, TestEvent> = next(
+  initialState,
+  timeout(1000, () => ({ type: "DelayDone" }))
+)
 
 type TestEvent =
   | { type: "DelayDone" }
