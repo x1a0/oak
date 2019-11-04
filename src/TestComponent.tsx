@@ -21,7 +21,7 @@ const init: Init<State, Action> = next(
 type Action =
   | { type: "DelayDone" }
   | { type: "Result"; value: string }
-  | { type: "Foobar" }
+  | { type: "ButtonClicked" }
 
 const fetchPost = makeEffect<Action>("fetchPost", () =>
   fetch("https://jsonplaceholder.typicode.com/posts/1")
@@ -35,14 +35,16 @@ const update: Update<State, Action> = (state, msg) => {
       return next({ ...state, value: "loading" }, fetchPost)
     case "Result":
       return next({ ...state, value: msg.value })
-    case "Foobar":
+    case "ButtonClicked":
       return next({ ...state, foobar: "I've been pressed" })
   }
 }
 
 export const TestComponent: FC = () => {
   const [state, dispatch] = useOak(update, init, { log: true })
-  const cb = useCallback(() => dispatch({ type: "Foobar" }), [dispatch])
+  const clicked = useCallback(() => dispatch({ type: "ButtonClicked" }), [
+    dispatch
+  ])
 
   if (state.value === "initial") {
     return <p>Haven't started yet</p>
@@ -55,7 +57,7 @@ export const TestComponent: FC = () => {
   return (
     <div>
       <p>{state.value}</p>
-      <button onClick={cb}>Press me</button>
+      <button onClick={clicked}>Press me</button>
       <p>{state.foobar}</p>
     </div>
   )
