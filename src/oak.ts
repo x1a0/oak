@@ -13,12 +13,23 @@ import {
 } from "rxjs/operators"
 
 type EffectResult<Event> = Promise<Event> | Observable<Event>
+type EffectRun<Event> = () => EffectResult<Event>
 
-export type Effect<Event> = {
+type Effect<Event, Data = any> = {
   name: string
-  opts?: object
-  execute: (opts: any) => EffectResult<Event>
+  run: EffectRun<Event>
+  data?: Data
 }
+
+export const makeEffect = <Event, Data = any>(
+  name: string,
+  run: EffectRun<Event>,
+  data?: Data
+): Effect<Event, Data> => ({
+  name,
+  run,
+  data
+})
 
 type StrictPropertyCheck<T, TExpected, TError> = Exclude<
   keyof T,
@@ -27,7 +38,7 @@ type StrictPropertyCheck<T, TExpected, TError> = Exclude<
   ? {}
   : TError
 
-export type Next<State, Action> = { state: State; cmd?: Effect<Action> }
+export type Next<State, Action> = { state: State; effect?: Effect<Action> }
 
 const observableFromEffectResult = <Event>(
   result: EffectResult<Event>
@@ -42,10 +53,10 @@ export const next = <State, Event, T extends State = State>(
       State,
       "Passed in invalid state properties, use next<State, Event>() for more descriptive error"
     >,
-  cmd?: Effect<Event>
+  effect?: Effect<Event>
 ): Next<State, Event> => ({
   state,
-  cmd
+  effect
 })
 export type Init<State, Event> = Next<State, Event> | (() => Next<State, Event>)
 export type Update<State, Event> = (
@@ -55,8 +66,8 @@ export type Update<State, Event> = (
 
 export type Dispatch<Event> = (msg: Event) => void
 
-function isCmd<Event>(cmd?: Effect<Event>): cmd is Effect<Event> {
-  return !!cmd
+function isEffect<Event>(effect?: Effect<Event>): effect is Effect<Event> {
+  return !!effect
 }
 
 export type OakOptions = {
@@ -68,7 +79,7 @@ export const useOak = <State, Event>(
   init: Init<State, Event>,
   opts?: OakOptions
 ): [State, Dispatch<Event>] => {
-  const { state: initialValue, cmd: initialCmd } =
+  const { state: initialValue, effect: initialEffect } =
     typeof init === "function" ? init() : init
   const [state$] = useState(new Subject<State>())
   const [msg$] = useState(new Subject<Event>())
@@ -89,10 +100,10 @@ export const useOak = <State, Event>(
 
     next$
       .pipe(
-        map(({ cmd }) => cmd),
-        filter(isCmd),
-        mergeMap((cmd: Effect<Event>) =>
-          observableFromEffectResult(cmd.execute(cmd.opts))
+        map(({ effect }) => effect),
+        filter(isEffect),
+        mergeMap((effect: Effect<Event>) =>
+          observableFromEffectResult(effect.run())
         )
       )
       .subscribe(msg$)
@@ -106,9 +117,9 @@ export const useOak = <State, Event>(
       })
 
     // Prime the initials
-    initialCmd &&
-      observableFromEffectResult(initialCmd.execute(initialCmd.opts)).subscribe(
-        m => msg$.next(m)
+    initialEffect &&
+      observableFromEffectResult(initialEffect.run()).subscribe(m =>
+        msg$.next(m)
       )
     state$.next(initialValue)
 
@@ -143,22 +154,17 @@ type HttpGetResult = {
 export const httpGet = <M>(
   opts: HttpGetOpts,
   msgCreator: (r: HttpGetResult) => M
-): Effect<M> => ({
-  name: "http.get",
-  opts: opts,
-  execute: o =>
-    ajax(o.uri).pipe(
+): Effect<M> =>
+  makeEffect("http.get", () =>
+    ajax(opts.uri).pipe(
       delay(1000), // For testing purposes
       map(res => msgCreator({ data: res.response }))
     )
-})
+  )
 
 // Timeout
 type TimeoutOpts = { duration: number }
-export const timeout = <M>(
-  duration: number,
-  msgCreator: () => M
-): Effect<M> => ({
-  name: "timeout",
-  execute: () => timer(duration).pipe(map(() => msgCreator()))
-})
+export const timeout = <M>(duration: number, msgCreator: () => M): Effect<M> =>
+  makeEffect("timeout", () => timer(duration).pipe(map(() => msgCreator())), {
+    duration
+  })

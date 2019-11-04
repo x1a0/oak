@@ -1,5 +1,5 @@
 import React, { FC, useContext } from "react"
-import { useOak, Update, httpGet, timeout, Effect, Init, next } from "./oak"
+import { useOak, Update, httpGet, timeout, Init, next, makeEffect } from "./oak"
 
 export type RemoteData<T> = "initial" | "loading" | T
 
@@ -22,32 +22,33 @@ type AppEvent =
 
 const init: Init<State, AppEvent> = next(initialState)
 
-export const fetchTodos: Effect<AppEvent> = httpGet(
+export const fetchTodos = httpGet<AppEvent>(
   {
     uri: "https://jsonplaceholder.typicode.com/todos/1"
   },
   ({ data }: { data: any }) => ({ type: "GotResult", data: data.title })
 )
 
-export const promiseTimeout: Effect<AppEvent> = {
-  name: "PromiseTime",
-  execute: () =>
-    new Promise(resolve =>
-      setTimeout(() => resolve({ type: "AfterTimeout" }), 2000)
-    )
-}
+export const promiseTimeout = (duration: number) =>
+  makeEffect<AppEvent, { duration: number }>(
+    "promiseTimeout",
+    () =>
+      new Promise(resolve =>
+        setTimeout(() => resolve({ type: "AfterTimeout" }), duration)
+      ),
+    {
+      duration
+    }
+  )
 
-export const addTimeout: Effect<AppEvent> = timeout(2000, () => ({
+export const addTimeout = timeout(2000, () => ({
   type: "AfterTimeout"
 }))
 
 export const update: Update<State, AppEvent> = (state, msg) => {
   switch (msg.type) {
     case "Add":
-      return next(
-        { ...state, result: msg.x + msg.y },
-        !state.timeoutDone ? promiseTimeout : undefined
-      )
+      return next({ ...state, result: msg.x + msg.y }, promiseTimeout(2000))
     case "GotResult":
       return next({ ...state, httpResult: msg.data })
     case "AfterTimeout":

@@ -1,5 +1,5 @@
 import React, { FC, useCallback } from "react"
-import { Effect, Init, next, timeout, Update, useOak } from "./oak"
+import { Init, next, timeout, Update, useOak, makeEffect } from "./oak"
 
 type RemoteData<T> = "initial" | "loading" | T
 
@@ -23,13 +23,11 @@ type TestEvent =
   | { type: "Result"; value: string }
   | { type: "Foobar" }
 
-const fetchPost: Effect<TestEvent> = {
-  name: "Fetching post 1",
-  execute: () =>
-    fetch("https://jsonplaceholder.typicode.com/posts/1")
-      .then(response => response.json())
-      .then(json => ({ type: "Result", value: json.title }))
-}
+const fetchPost = makeEffect<TestEvent>("fetchPost", () =>
+  fetch("https://jsonplaceholder.typicode.com/posts/1")
+    .then(response => response.json())
+    .then(json => ({ type: "Result", value: json.title }))
+)
 
 const update: Update<State, TestEvent> = (state, msg) => {
   switch (msg.type) {
