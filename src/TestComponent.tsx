@@ -18,22 +18,22 @@ const fetchPost = (): Promise<Action> =>
     .then(response => response.json())
     .then(json => ({ type: "Result", value: json.title }))
 
-const init: Init<State, Effect> = next(initialState, {
-  type: "Timeout",
-  duration: 1000
-})
-
 type Action =
   | { type: "DelayDone" }
   | { type: "Result"; value: string }
   | { type: "ButtonClicked" }
 
-type Effect = { type: "FetchPost" } | { type: "Timeout"; duration: number }
+enum Effect {
+  FetchPost,
+  Timeout
+}
+const init: Init<State, Effect> = next(initialState, Effect.Timeout)
+//type Effect = { type: "FetchPost" } | { type: "Timeout"; duration: number }
 
 const update: Update<State, Action, Effect> = (state, msg) => {
   switch (msg.type) {
     case "DelayDone":
-      return next({ ...state, value: "loading" }, { type: "FetchPost" })
+      return next({ ...state, value: "loading" }, Effect.FetchPost)
     case "Result":
       return next({ ...state, value: msg.value })
     case "ButtonClicked":
@@ -42,12 +42,12 @@ const update: Update<State, Action, Effect> = (state, msg) => {
 }
 
 const effectHandler: EffectHandler<Action, Effect> = dispatch => effect => {
-  switch (effect.type) {
-    case "FetchPost":
+  switch (effect) {
+    case Effect.FetchPost:
       fetchPost().then(action => dispatch(action))
       break
-    case "Timeout":
-      setTimeout(() => dispatch({ type: "DelayDone" }), effect.duration)
+    case Effect.Timeout:
+      setTimeout(() => dispatch({ type: "DelayDone" }), 1000)
       break
   }
 }

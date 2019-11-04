@@ -64,13 +64,13 @@ export const setupOak = <State, Action, Effect>(
       tap(([msg, state]) => console.log("calling update:", msg, state)),
       map(([msg, state]) => updateFunc(state, msg)),
       tap(next => log && console.log("Update returned:", next)),
-      tap(next => next.effect && handleEffect(next.effect)),
+      tap(next => next.effect !== undefined && handleEffect(next.effect)),
       map(next => next.state)
     )
     .subscribe(state => state$.next(state))
 
   state$.next(initialState)
-  initialEffect && handleEffect(initialEffect)
+  initialEffect !== undefined && handleEffect(initialEffect)
 
   return [state$.pipe(distinctUntilChanged()), dispatch]
 }
