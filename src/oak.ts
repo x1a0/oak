@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react"
-import { Observable, Subject, timer } from "rxjs"
+import { Observable, Subject, timer, from } from "rxjs"
 import { ajax } from "rxjs/ajax"
 import {
   delay,
@@ -12,10 +12,12 @@ import {
   withLatestFrom
 } from "rxjs/operators"
 
+type EffectResult<Event> = Promise<Event> | Observable<Event>
+
 export type Effect<Event> = {
   name: string
   opts?: object
-  execute: (opts: any) => Observable<Event>
+  execute: (opts: any) => EffectResult<Event>
 }
 
 type X = { a: string; b: number }
@@ -30,7 +32,11 @@ type StrictPropertyCheck<T, TExpected, TError> = Exclude<
   ? {}
   : TError
 
-export type Next<State, Event> = { state: State; cmd?: Effect<Event> }
+export type Next<State, Action> = { state: State; cmd?: Effect<Action> }
+
+const observableFromEffectResult = <Event>(
+  result: EffectResult<Event>
+): Observable<Event> => (result instanceof Promise ? from(result) : result)
 
 // The state is strictly property checked for excess properties to give better
 // feedback when using without having to manually define the types
@@ -83,7 +89,9 @@ export function useOak<State, Event>(
       .pipe(
         map(({ cmd }) => cmd),
         filter(isCmd),
-        mergeMap((cmd: Effect<Event>) => cmd.execute(cmd.opts))
+        mergeMap((cmd: Effect<Event>) =>
+          observableFromEffectResult(cmd.execute(cmd.opts))
+        )
       )
       .subscribe(msg$)
 
@@ -97,7 +105,9 @@ export function useOak<State, Event>(
 
     // Prime the initials
     initialCmd &&
-      initialCmd.execute(initialCmd.opts).subscribe(m => msg$.next(m))
+      observableFromEffectResult(initialCmd.execute(initialCmd.opts)).subscribe(
+        m => msg$.next(m)
+      )
     state$.next(initialValue)
 
     return () => {
