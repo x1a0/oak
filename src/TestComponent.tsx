@@ -1,7 +1,5 @@
-import React, { useCallback, FC } from "react"
-import { makeEffect, Init, next, Update, useOak } from "./oak"
-import { timer } from "rxjs"
-import { map } from "rxjs/operators"
+import React, { FC, useCallback } from "react"
+import { EffectHandler, Init, next, Update, useOak } from "./oak"
 
 type RemoteData<T> = "initial" | "loading" | T
 
@@ -15,35 +13,27 @@ const initialState = {
 }
 type State = typeof initialState
 
-// Timeout
-export const timeout = <Action extends {}>(
-  duration: number,
-  msgCreator: () => Action
-) =>
-  makeEffect("timeout", () => timer(duration).pipe(map(() => msgCreator())), {
-    duration
-  })
-
-const fetchPost = makeEffect<Action>("fetchPost", () =>
+const fetchPost = (): Promise<Action> =>
   fetch("https://jsonplaceholder.typicode.com/posts/1")
     .then(response => response.json())
     .then(json => ({ type: "Result", value: json.title }))
-)
 
-const init: Init<State, Action> = next(
-  initialState,
-  timeout(1000, () => ({ type: "DelayDone" }))
-)
+const init: Init<State, Effect> = next(initialState, {
+  type: "Timeout",
+  duration: 1000
+})
 
 type Action =
   | { type: "DelayDone" }
   | { type: "Result"; value: string }
   | { type: "ButtonClicked" }
 
-const update: Update<State, Action> = (state, msg) => {
+type Effect = { type: "FetchPost" } | { type: "Timeout"; duration: number }
+
+const update: Update<State, Action, Effect> = (state, msg) => {
   switch (msg.type) {
     case "DelayDone":
-      return next({ ...state, value: "loading" }, fetchPost)
+      return next({ ...state, value: "loading" }, { type: "FetchPost" })
     case "Result":
       return next({ ...state, value: msg.value })
     case "ButtonClicked":
@@ -51,8 +41,21 @@ const update: Update<State, Action> = (state, msg) => {
   }
 }
 
+const effectHandler: EffectHandler<Action, Effect> = dispatch => effect => {
+  switch (effect.type) {
+    case "FetchPost":
+      fetchPost().then(action => dispatch(action))
+      break
+    case "Timeout":
+      setTimeout(() => dispatch({ type: "DelayDone" }), effect.duration)
+      break
+  }
+}
+
 export const TestComponent: FC = () => {
-  const [state, dispatch] = useOak(update, init, { log: true })
+  const [state, dispatch] = useOak(update, init, effectHandler, {
+    log: true
+  })
   const clicked = useCallback(() => dispatch({ type: "ButtonClicked" }), [
     dispatch
   ])
