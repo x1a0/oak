@@ -25,10 +25,13 @@ type TestEvent =
   | { type: "Result"; value: string }
   | { type: "Foobar" }
 
-const fetchPost: Effect<TestEvent> = httpGet(
-  { uri: "https://jsonplaceholder.typicode.com/posts/1" },
-  ({ data }: { data: any }) => ({ type: "Result", value: data.title })
-)
+const fetchPost: Effect<TestEvent> = {
+  name: "Fetching post 1",
+  execute: () =>
+    fetch("https://jsonplaceholder.typicode.com/posts/1")
+      .then(response => response.json())
+      .then(json => ({ type: "Result", value: json.title }))
+}
 
 const update: Updater<State, TestEvent> = (state, msg) => {
   switch (msg.type) {
