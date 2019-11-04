@@ -20,11 +20,6 @@ export type Effect<Event> = {
   execute: (opts: any) => EffectResult<Event>
 }
 
-type X = { a: string; b: number }
-type Y = { a: string; b: number }
-
-type Z = Exclude<keyof Y, keyof X> extends never ? {} : "Sliff"
-
 type StrictPropertyCheck<T, TExpected, TError> = Exclude<
   keyof T,
   keyof TExpected
