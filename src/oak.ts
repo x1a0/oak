@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
-import { Observable, Subject, timer, from } from "rxjs"
-import { ajax } from "rxjs/ajax"
+import { from, Observable, Subject } from "rxjs"
 import {
-  delay,
   distinctUntilChanged,
   filter,
   map,
@@ -158,32 +156,3 @@ export const useOak = <State, Action>(
 
   return [state, dispatch]
 }
-
-// Commands
-// --------
-
-// HTTP get
-type HttpGetResult = {
-  data: string
-}
-
-export const httpGet = <M>(
-  uri: string,
-  msgCreator: (r: HttpGetResult) => M
-): Effect<M, { uri: string }> =>
-  makeEffect(
-    "http.get",
-    () =>
-      ajax(uri).pipe(
-        delay(1000), // For testing purposes
-        map(res => msgCreator(res.response))
-      ),
-    { uri }
-  )
-
-// Timeout
-type TimeoutOpts = { duration: number }
-export const timeout = <M>(duration: number, msgCreator: () => M): Effect<M> =>
-  makeEffect("timeout", () => timer(duration).pipe(map(() => msgCreator())), {
-    duration
-  })

@@ -1,5 +1,7 @@
 import React, { FC, useContext } from "react"
-import { useOak, Update, httpGet, timeout, Init, next, makeEffect } from "./oak"
+import { ajax } from "rxjs/ajax"
+import { delay, map } from "rxjs/operators"
+import { Init, makeEffect, next, Update, useOak } from "./oak"
 
 export type RemoteData<T> = "initial" | "loading" | T
 
@@ -22,9 +24,11 @@ type AppAction =
 
 const init: Init<State, AppAction> = next(initialState)
 
-export const fetchTodos = httpGet<AppAction>(
-  "https://jsonplaceholder.typicode.com/todos/1",
-  ({ data }: { data: any }) => ({ type: "GotResult", data: data.title })
+export const fetchTodos = makeEffect<AppAction>("fetchTodos", () =>
+  ajax("https://jsonplaceholder.typicode.com/todos/1").pipe(
+    delay(1000),
+    map(res => ({ type: "GotResult", data: res.response.title }))
+  )
 )
 
 export const promiseTimeout = (duration: number) =>
@@ -38,10 +42,6 @@ export const promiseTimeout = (duration: number) =>
       duration
     }
   )
-
-export const addTimeout = timeout(2000, () => ({
-  type: "AfterTimeout"
-}))
 
 export const update: Update<State, AppAction> = (state, msg) => {
   switch (msg.type) {
