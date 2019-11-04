@@ -12,20 +12,20 @@ import {
   withLatestFrom
 } from "rxjs/operators"
 
-type EffectResult<Event> = Promise<Event> | Observable<Event>
-type EffectRun<Event> = () => EffectResult<Event>
+type EffectResult<Action> = Promise<Action> | Observable<Action>
+type EffectRun<Action> = () => EffectResult<Action>
 
-type Effect<Event, Data = any> = {
+type Effect<Action, Data = any> = {
   name: string
-  run: EffectRun<Event>
+  run: EffectRun<Action>
   data?: Data
 }
 
-export const makeEffect = <Event, Data = any>(
+export const makeEffect = <Action, Data = any>(
   name: string,
-  run: EffectRun<Event>,
+  run: EffectRun<Action>,
   data?: Data
-): Effect<Event, Data> => ({
+): Effect<Action, Data> => ({
   name,
   run,
   data
@@ -40,33 +40,33 @@ type StrictPropertyCheck<T, TExpected, TError> = Exclude<
 
 export type Next<State, Action> = { state: State; effect?: Effect<Action> }
 
-const observableFromEffectResult = <Event>(
-  result: EffectResult<Event>
-): Observable<Event> => (result instanceof Promise ? from(result) : result)
+const observableFromEffectResult = <Action>(
+  result: EffectResult<Action>
+): Observable<Action> => (result instanceof Promise ? from(result) : result)
 
 // The state is strictly property checked for excess properties to give better
 // feedback when using without having to manually define the types
-export const next = <State, Event, T extends State = State>(
+export const next = <State, Action, T extends State = State>(
   state: T &
     StrictPropertyCheck<
       T,
       State,
-      "Passed in invalid state properties, use next<State, Event>() for more descriptive error"
+      "Passed in invalid state properties, use next<State, Action>() for more descriptive error"
     >,
-  effect?: Effect<Event>
-): Next<State, Event> => ({
+  effect?: Effect<Action>
+): Next<State, Action> => ({
   state,
   effect
 })
-export type Init<State, Event> = Next<State, Event> | (() => Next<State, Event>)
-export type Update<State, Event> = (
+export type Init<State, Action> = Next<State, Action> | (() => Next<State, Action>)
+export type Update<State, Action> = (
   state: State,
-  msg: Event
-) => Next<State, Event>
+  msg: Action
+) => Next<State, Action>
 
-export type Dispatch<Event> = (msg: Event) => void
+export type Dispatch<Action> = (msg: Action) => void
 
-function isEffect<Event>(effect?: Effect<Event>): effect is Effect<Event> {
+function isEffect<Action>(effect?: Effect<Action>): effect is Effect<Action> {
   return !!effect
 }
 
@@ -74,15 +74,15 @@ export type OakOptions = {
   log?: boolean
 }
 
-export const useOak = <State, Event>(
-  updateFunc: Update<State, Event>,
-  init: Init<State, Event>,
+export const useOak = <State, Action>(
+  updateFunc: Update<State, Action>,
+  init: Init<State, Action>,
   opts?: OakOptions
-): [State, Dispatch<Event>] => {
+): [State, Dispatch<Action>] => {
   const { state: initialValue, effect: initialEffect } =
     typeof init === "function" ? init() : init
   const [state$] = useState(new Subject<State>())
-  const [msg$] = useState(new Subject<Event>())
+  const [msg$] = useState(new Subject<Action>())
 
   // Used to trigger hook to re-emit values
   const [state, setState] = useState<State>(initialValue)
@@ -91,7 +91,7 @@ export const useOak = <State, Event>(
 
   useEffect(() => {
     const next$ = msg$.pipe(
-      tap(msg => log && console.log("Event:", msg)),
+      tap(msg => log && console.log("Action:", msg)),
       withLatestFrom(state$),
       map(([msg, state]) => updateFunc(state, msg)),
       tap(next => log && console.log("Update returned:", next)),
@@ -102,7 +102,7 @@ export const useOak = <State, Event>(
       .pipe(
         map(({ effect }) => effect),
         filter(isEffect),
-        mergeMap((effect: Effect<Event>) =>
+        mergeMap((effect: Effect<Action>) =>
           observableFromEffectResult(effect.run())
         )
       )
@@ -129,8 +129,8 @@ export const useOak = <State, Event>(
     // eslint-disable-next-line
   }, [])
 
-  const dispatch: Dispatch<Event> = useCallback(
-    (msg: Event) => {
+  const dispatch: Dispatch<Action> = useCallback(
+    (msg: Action) => {
       msg$.next(msg)
     },
     [msg$]

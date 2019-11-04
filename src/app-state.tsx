@@ -15,14 +15,14 @@ export const initialState = {
 
 export type State = typeof initialState
 
-type AppEvent =
+type AppAction =
   | { type: "Add"; x: number; y: number }
   | { type: "GotResult"; data: string }
   | { type: "AfterTimeout" }
 
-const init: Init<State, AppEvent> = next(initialState)
+const init: Init<State, AppAction> = next(initialState)
 
-export const fetchTodos = httpGet<AppEvent>(
+export const fetchTodos = httpGet<AppAction>(
   {
     uri: "https://jsonplaceholder.typicode.com/todos/1"
   },
@@ -30,7 +30,7 @@ export const fetchTodos = httpGet<AppEvent>(
 )
 
 export const promiseTimeout = (duration: number) =>
-  makeEffect<AppEvent, { duration: number }>(
+  makeEffect<AppAction, { duration: number }>(
     "promiseTimeout",
     () =>
       new Promise(resolve =>
@@ -45,7 +45,7 @@ export const addTimeout = timeout(2000, () => ({
   type: "AfterTimeout"
 }))
 
-export const update: Update<State, AppEvent> = (state, msg) => {
+export const update: Update<State, AppAction> = (state, msg) => {
   switch (msg.type) {
     case "Add":
       return next({ ...state, result: msg.x + msg.y }, promiseTimeout(2000))
@@ -57,7 +57,7 @@ export const update: Update<State, AppEvent> = (state, msg) => {
   }
 }
 
-const DispatchContext = React.createContext((_: AppEvent) => {})
+const DispatchContext = React.createContext((_: AppAction) => {})
 const StateContext = React.createContext(initialState)
 
 export const AppStateProvider: FC = ({ children }) => {
