@@ -10,10 +10,15 @@ phases:
       - echo "install phase is done"
   pre_build:
     commands:
+      - npm install
+      - npm run test
       - echo "pre_build phase is done"
   build:
     commands:
+      - GIT_SHORT=$(git rev-parse --verify --short HEAD)
+      - docker build -t 477288082536.dkr.ecr.eu-west-1.amazonaws.com/oak:${GIT_SHORT} .
       - echo "build phase is done"
   post_build:
     commands:
+      - docker push 477288082536.dkr.ecr.eu-west-1.amazonaws.com/oak:${GIT_SHORT}
       - echo "post_build phase is done"
