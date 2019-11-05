@@ -1,0 +1,19 @@
+version: 0.2
+
+phases:
+  install:
+    run-as: root
+    runtime-versions:
+      nodejs: 10
+      docker: 18
+    commands:
+      - echo "install phase is done"
+  pre_build:
+    commands:
+      - echo "pre_build phase is done"
+  build:
+    commands:
+      - echo "build phase is done"
+  post_build:
+    commands:
+      - echo "post_build phase is done"
