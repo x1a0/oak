@@ -6,8 +6,9 @@ COPY . .
 #RUN chown -R www-data:www-data /home/www-data
 
 #USER www-data
-RUN npm install && npm run build
-RUN npm install -g serve
+RUN npm install \
+    && npm run build \
+    && npm install -g serve
 
 EXPOSE 5000
 

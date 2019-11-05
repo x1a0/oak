@@ -10,6 +10,7 @@ phases:
       - echo "install phase is done"
   pre_build:
     commands:
+      - export CI=true
       - npm install
       - npm run test
       - echo "pre_build phase is done"
