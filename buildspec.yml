@@ -21,8 +21,7 @@ phases:
   post_build:
     commands:
       - echo "post_build phase is done"
-
 artifacts:
   files:
-    - build/**/*
-  name: oak-$GIT_SHORT.zip
+    - **/*
+  base-directory: build
