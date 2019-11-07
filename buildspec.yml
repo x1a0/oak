@@ -5,13 +5,11 @@ phases:
     run-as: root
     runtime-versions:
       nodejs: 10
-      docker: 18
     commands:
       - echo "install phase is done"
   pre_build:
     commands:
       - GIT_SHORT=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
-      - $(aws ecr get-login --region eu-west-1 --no-include-email)
       - CI=true
       - npm install
       - npm run test
@@ -26,5 +24,5 @@ phases:
 
 artifacts:
   files:
-    - build/*
-  name: oak-$GIT_SHORT
+    - build/**/*
+  name: oak-$GIT_SHORT.zip
