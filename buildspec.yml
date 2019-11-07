@@ -23,5 +23,5 @@ phases:
       - echo "post_build phase is done"
 artifacts:
   files:
-    - **/*
+    - "**/*"
   base-directory: build
